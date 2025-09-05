@@ -7,6 +7,13 @@ from uuid import uuid4
 from fastapi.testclient import TestClient
 
 from app.main import app
+from fastapi.testclient import TestClient
+from fastapi import Depends
+
+from app.api.routers import todos as todos_router
+from app.services.todos.service import TodoService
+from app.domain.todos.entities import TodoEntity
+from app.domain.todos.interfaces import TodoRepository
 
 
 class FakeDocumentSnapshot:
@@ -70,24 +77,73 @@ class FakeCollection:
         return FakeQuery(self)
 
 
-class FakeFirestoreClient:
-    def __init__(self):
-        self._collections: Dict[str, FakeCollection] = {}
+class InMemoryTodoRepository(TodoRepository):
+    def __init__(self) -> None:
+        self._store: Dict[str, Dict[str, Any]] = {}
 
-    def collection(self, name: str) -> FakeCollection:
-        if name not in self._collections:
-            self._collections[name] = FakeCollection()
-        return self._collections[name]
+    def list(self) -> List[TodoEntity]:
+        docs = [
+            TodoEntity(
+                id=doc_id,
+                title=data["title"],
+                description=data.get("description"),
+                completed=bool(data.get("completed", False)),
+                created_at=data["created_at"],
+                updated_at=data["updated_at"],
+            )
+            for doc_id, data in self._store.items()
+        ]
+        docs.sort(key=lambda e: e.created_at)
+        return docs
+
+    def get(self, todo_id: str) -> TodoEntity | None:
+        data = self._store.get(todo_id)
+        if data is None:
+            return None
+        return TodoEntity(
+            id=todo_id,
+            title=data["title"],
+            description=data.get("description"),
+            completed=bool(data.get("completed", False)),
+            created_at=data["created_at"],
+            updated_at=data["updated_at"],
+        )
+
+    def create(self, title: str, description: str | None, completed: bool, now) -> TodoEntity:
+        doc_id = uuid4().hex
+        data = {
+            "title": title,
+            "description": description,
+            "completed": completed,
+            "created_at": now,
+            "updated_at": now,
+        }
+        self._store[doc_id] = data
+        return self.get(doc_id)  # type: ignore[return-value]
+
+    def update(self, todo_id: str, updates: dict, now) -> TodoEntity | None:
+        if todo_id not in self._store:
+            return None
+        current = self._store[todo_id]
+        current.update(updates)
+        current["updated_at"] = now
+        self._store[todo_id] = current
+        return self.get(todo_id)
+
+    def delete(self, todo_id: str) -> bool:
+        return self._store.pop(todo_id, None) is not None
 
 
 def test_crud_todos(monkeypatch):
-    fake_db = FakeFirestoreClient()
+    # Use a single in-memory repository instance shared across requests
+    shared_repo = InMemoryTodoRepository()
+    shared_service = TodoService(repository=shared_repo)
 
-    # Inyectar el cliente falso en el router
-    import app.routers.todos as todos_router
+    # Override dependency to inject the shared service
+    def get_test_service() -> TodoService:
+        return shared_service
 
-    monkeypatch.setattr(todos_router, "get_firestore_client", lambda: fake_db)
-
+    app.dependency_overrides[todos_router.get_todo_service] = get_test_service
     client = TestClient(app)
 
     # List inicial vacío
