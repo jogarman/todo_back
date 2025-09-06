@@ -7,7 +7,7 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 
-# Entornos
+# Environments & dotenv
 .venv/
 .env
 .env.*
@@ -26,3 +26,8 @@ dist/
 # Coverage
 .coverage
 htmlcov/
+
+# Credentials (do not commit secrets)
+*service-account*.json
+*firebase*.json
+*credentials*.json
