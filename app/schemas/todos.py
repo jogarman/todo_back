@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 
 from pydantic import BaseModel, Field
 
@@ -28,3 +28,8 @@ class TodoRead(BaseModel):
     completed: bool
     created_at: datetime
     updated_at: datetime
+
+
+class TodoPage(BaseModel):
+    items: List[TodoRead]
+    next_cursor: Optional[datetime] = None
