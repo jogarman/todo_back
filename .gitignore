@@ -31,3 +31,7 @@ htmlcov/
 *service-account*.json
 *firebase*.json
 *credentials*.json
+
+# Runtime artifacts
+server.log
+*.pid

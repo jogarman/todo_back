@@ -27,7 +27,14 @@ Campos por documento:
 - `completed: boolean`
 - `created_at: timestamp`
 - `updated_at: timestamp`
+- `list_id?: string` (referencia a lista)
+- `attachments?: [ { file_name, content_type, size, url, uploaded_at } ]`
 Índice recomendado: `created_at` ascendente
+
+Colección: `lists`
+- `name: string`
+- `created_at: timestamp`
+- `updated_at: timestamp`
 
 ### Entorno local
 - Instalar deps: `poetry install`
@@ -42,6 +49,12 @@ Campos por documento:
 - Fase 4: Tests (pytest + httpx), cobertura básica y CI
 - Fase 5: Autenticación (Google Identity Platform o JWT) [post-MVP]
 - Fase 6: Versionado de API y documentación extendida OpenAPI
+
+### Extensión (MVP++): Listas y Adjuntos
+- Listas CRUD: `/lists` y `/lists/{id}`; nesting: `/lists/{id}/todos`
+- Adjuntos por TODO: subir hasta 3 archivos (máx 5MB c/u)
+- Almacenamiento: Google Cloud Storage (bucket configurable)
+- Seguridad: URLs públicas de demo (opcional URLs firmadas más adelante)
 
 ### Notas
 - MVP sin auth para simplicidad
